@@ -42,14 +42,51 @@ def get_task_by_id(task_id):
 
 
 def add_new_task(form):
-    new_task = {"id": get_max_id(),
-        "title": form['title'],
-        "description": form['description'],
-        "category": form['category'],
-        "status": "Pending"
+    if not "title" in form:
+       return False
+    
+    description = form['description'] if "description" in form else ""
+    category = form['category'] if "category" in form else "Default"
+
+    if form['title'].strip():
+        new_task = {"id": get_max_id(),
+            "title": form['title'],
+            "description": description,
+            "category": category,
+            "status": "Pending"
         } 
-    task_items.append(new_task)
-    save_db()
+        task_items.append(new_task)
+        save_db()
+        return True
+    else:
+        return False
+    
+def update_task_by_id(task_id, form):
+    if not "title" in form:
+       return False
+    
+    description = form['description'] if "description" in form else ""
+    category = form['category'] if "category" in form else "Default"
+    status = form['status'] if "status" in form else "Pending"
+
+    if form['title'].strip():
+        update_task = {"id": task_id,
+            "title": form['title'],
+            "description": description,
+            "category": category,
+            "status": "Completed" if status.lower() == 'completed' else "Pending",
+        }
+
+        for index, task in enumerate(task_items):
+            if task["id"] == task_id:
+                task_items[index] = update_task
+                save_db()
+                return True
+        return False
+    else:
+        return False
+
+    
 
 def delete_task_by_id(task_id):
     for index, task in enumerate(task_items):
@@ -57,12 +94,6 @@ def delete_task_by_id(task_id):
             del task_items[index] 
             save_db()
             break
-
-def update_task_by_id(task_id, update_task):
-    for index, task in enumerate(task_items):
-        if task["id"] == task_id:
-            task_items[index] = update_task
-            save_db()
 
 def get_all_categories():
     categoreis = set()

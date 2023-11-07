@@ -9,9 +9,6 @@ def request_all_tasks():
         return response.json()
     else:
         return []
-    
- 
-    
 
 def request_task_by_id(task_id):
     request_url = request.url_root + f"/tasks/{task_id}" 
