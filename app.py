@@ -9,10 +9,6 @@ import http_request
 
 app = Flask(__name__)
 
-
-
-category = [(1,"Default"), (2, "Easy"), (3, "Medium"), (4, "Hard")]
-
 # #################### Config ##########################
 # security mechanisms used in web applications to protect against Cross-Site Request 
 app.secret_key = config.JWT_SECRET_KEY
@@ -21,7 +17,6 @@ app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
 jwt = JWTManager(app)
 
 model.task_items = model.load_db("task.json")
-task_categories = model.get_categories_tuples() 
 
 # #################### ENDPOINT - AUTH PROCESS ##########################
 
@@ -172,9 +167,11 @@ def home():
 
     deleteItemForm = utility.DeleteItemForm() 
     filter_form = utility.FilterForm(request.args, meta={"csrf": False}) 
-    category_items = task_categories
+    category_items = model.get_categories_tuples()
     category_items.insert(0, ("-", "---"))   
     filter_form.category.choices = category_items
+
+    filter_form.status.choices.insert(0, ("-", "---"))
  
     if filter_form.validate():  
         filter_title = filter_form.title.data
@@ -182,16 +179,28 @@ def home():
         fileter_category = filter_form.category.data
    
         if filter_title.strip():
-            filter_items = [task for task in model.task_items if filter_title in task["title"]]
+            matching_tasks = []
+            for task in filter_items:
+                if filter_title.lower() in task["title"].lower():
+                    matching_tasks.append(task)
+            filter_items = matching_tasks
         else:
             filter_title = "-"
 
         if not filter_status == "-":
-            filter_items = [task for task in model.task_items if filter_status in task["status"]]
+            matching_tasks = []
+            for task in filter_items:
+                if filter_status.lower() in task["status"].lower():
+                    matching_tasks.append(task)
+            filter_items = matching_tasks
 
         if not fileter_category == "-":
-            filter_items = [task for task in model.task_items if fileter_category in task["category"]]
-   
+            matching_tasks = []
+            for task in filter_items:
+                if fileter_category.lower() in task["category"].lower():
+                    matching_tasks.append(task)
+            filter_items = matching_tasks
+
     return render_template("home.html",
                         is_authen = get_is_auth(),
                         items=filter_items,
