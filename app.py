@@ -23,7 +23,6 @@ model.task_items = model.load_db(model.task_filename)
 def get_is_auth():
     return config.jwt_token != "" 
 
-
 # Custom authentication decorator
 def allow_access_only_browser(func):
     def decorated_function(*args, **kwargs): 
@@ -142,8 +141,7 @@ def filter_by_category(category_name):
 @app.route('/', methods=['GET'], endpoint="home")
 @allow_access_only_browser
 def home(): 
-    filter_items = http_request.request_all_tasks()
-
+    # prepare filter form
     deleteItemForm = utility.DeleteItemForm() 
     filter_form = utility.FilterForm(request.args, meta={"csrf": False}) 
     category_items = model.get_categories_tuples()
@@ -151,34 +149,11 @@ def home():
     filter_form.category.choices = category_items
 
     filter_form.status.choices.insert(0, ("-", "---"))
- 
+    # do filter 
     if filter_form.validate():  
-        filter_title = filter_form.title.data
-        filter_status = filter_form.status.data
-        fileter_category = filter_form.category.data
-   
-        if filter_title.strip():
-            matching_tasks = []
-            for task in filter_items:
-                if filter_title.lower() in task["title"].lower():
-                    matching_tasks.append(task)
-            filter_items = matching_tasks
-        else:
-            filter_title = "-"
-
-        if not filter_status == "-":
-            matching_tasks = []
-            for task in filter_items:
-                if filter_status.lower() in task["status"].lower():
-                    matching_tasks.append(task)
-            filter_items = matching_tasks
-
-        if not fileter_category == "-":
-            matching_tasks = []
-            for task in filter_items:
-                if fileter_category.lower() in task["category"].lower():
-                    matching_tasks.append(task)
-            filter_items = matching_tasks
+        filter_items = model.do_filter_task(filter_form)
+    else:
+        filter_items = http_request.request_all_tasks()
 
     return render_template("home.html",
                         is_authen = get_is_auth(),
@@ -195,8 +170,8 @@ def home():
 @app.route("/todo/<int:task_id>/detail", methods=["GET"], endpoint="detail_tasks")
 @allow_access_only_browser
 def item(task_id):  
-    deleteItemForm = utility.DeleteItemForm() 
-
+    deleteItemForm = utility.DeleteItemForm()  
+    
     task_info = http_request.request_task_by_id(task_id) 
     if task_info:
         return render_template("item.html", 
@@ -234,9 +209,10 @@ def edit_item(task_id):
 
     if task_info:
         form = utility.EditItemForm()
-        
+        # method POST : update data
         if form.validate_on_submit(): 
             response = http_request.request_update_task(request.form, task_id)
+            # result
             if response["status"] == 200:
                 flash("Item {} has been successfully updated"
                     .format(form.title.data), "success")
@@ -245,6 +221,7 @@ def edit_item(task_id):
                 flash("Some thing wrong with update item process"
                 .format(request.form.get("title")), "danger")    
         
+        # method GET prepare form with task_info
         form.status.default = task_info["status"]
         form.process()
         form.title.data       = task_info["title"]

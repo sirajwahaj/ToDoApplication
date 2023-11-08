@@ -86,7 +86,6 @@ def update_task_by_id(task_id, form):
     else:
         return False
 
-    
 
 def delete_task_by_id(task_id):
     for index, task in enumerate(task_items):
@@ -101,6 +100,7 @@ def get_all_categories():
         categoreis.add(value['category'])
     return list(categoreis)
 
+
 def filter_by_category(category_name):
     tasks_list = list()
 
@@ -110,9 +110,42 @@ def filter_by_category(category_name):
 
     return tasks_list
 
+
 def get_categories_tuples():
     cateigries = get_all_categories()
     return [(item, item) for item in cateigries]
+
+def do_filter_task(filter_form):
+    # get all task
+    filter_items = task_items
+
+    filter_title = filter_form.title.data
+    filter_status = filter_form.status.data
+    fileter_category = filter_form.category.data
+    # filter text search
+    if filter_title.strip():
+        matching_tasks = []
+        for task in filter_items:
+            if filter_title.lower() in task["title"].lower():
+                matching_tasks.append(task)
+        filter_items = matching_tasks
+    else:
+        filter_title = "-"
+    # filter status
+    if not filter_status == "-":
+        matching_tasks = []
+        for task in filter_items:
+            if filter_status.lower() in task["status"].lower():
+                matching_tasks.append(task)
+        filter_items = matching_tasks
+    # filter category
+    if not fileter_category == "-":
+        matching_tasks = []
+        for task in filter_items:
+            if fileter_category.lower() in task["category"].lower():
+                matching_tasks.append(task)
+        filter_items = matching_tasks
+    return filter_items
 
 
 
