@@ -1,14 +1,17 @@
 from app import app
 import pytest
 import model
-import config
 from flask import request
 
 model.task_filename = "task_test.json"
 model.task_items = model.load_db(model.task_filename)
 
 '''
-Status: 
+We will test on task_test.json. 
+You have to follow task_id in this file to test preview, update, delete.
+We test only backend endpoints and Request JWT token (extra endpoint)
+
+backend response tatus: 
 200 : success
 201 : not found
 202 : title is empty
@@ -32,8 +35,6 @@ def test_task_all_tasks(client):
 # @app.route("/tasks/", methods=["POST"])
 def test_task_new_record_success(client):
     headers = {}
-    # return status=200 if title is not empty
-    # return status=201 if title is empty (error)
     form_data = {"title": "Test form",
         "description": "detail",
         "category": "test task"
@@ -46,7 +47,7 @@ def test_task_new_record_success(client):
 
 def test_task_new_record_failed(client):
     headers = {}
-    form_data = {"title": "",
+    form_data = {
         "description": "detail",
         "category": "test task"
         }

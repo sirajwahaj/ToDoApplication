@@ -7,6 +7,14 @@ import config
 import utility
 import http_request
 
+'''
+Backend response status: 
+200 : success
+201 : not found
+202 : title is empty
+203 : task already completed
+'''
+
 app = Flask(__name__)
 
 # #################### Config ##########################
@@ -16,10 +24,11 @@ app.secret_key = config.JWT_SECRET_KEY
 app.config["JWT_SECRET_KEY"] = config.JWT_SECRET_KEY
 jwt = JWTManager(app)
 
+# Load tasks from json
 model.task_items = model.load_db(model.task_filename)
 
 # #################### ENDPOINT - AUTH PROCESS ##########################
-
+# check if user login
 def get_is_auth():
     return config.jwt_token != "" 
 
@@ -31,7 +40,7 @@ def allow_access_only_browser(func):
         return func(*args, **kwargs)
     return decorated_function
 
-
+# render login form
 @app.route("/login", methods=["GET"], endpoint="login")
 @allow_access_only_browser
 def login():
@@ -41,7 +50,7 @@ def login():
                            is_authen=is_authen, 
                            form=authForm)  
 
-
+# get token frontend-> redirect to home , postman -> show token
 @app.route("/login", methods=["POST"], endpoint="get_token")
 def get_token():
     config.jwt_token = create_access_token(identity=config.JWT_SECRET_KEY)
@@ -51,7 +60,7 @@ def get_token():
         flash("authorization has been successfully ", "success")
         return redirect(url_for("home"))
 
-
+# clear token on front end / backend still has token 
 @app.route("/logout", endpoint="logout")
 @allow_access_only_browser
 def logout():
@@ -182,7 +191,6 @@ def item(task_id):
         flash("Not found item", "warning")
 
     return redirect(url_for("home"))
-
 
 # -------- NEW ITEM  ------------
 @app.route("/todo/new", methods=["GET", "POST"], endpoint="new_tasks")
