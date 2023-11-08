@@ -20,31 +20,9 @@ model.task_items = model.load_db(model.task_filename)
 
 # #################### ENDPOINT - AUTH PROCESS ##########################
 
-# the 'Authorization' header with the JWT token 
-def authorized_request():
-    headers = {
-        'Authorization': f"Bearer {config.jwt_token}"
-    }
-
-    # Make an HTTP GET request to the API with the 'Authorization' header
-    request_url = request.url_root + "/protected"
-    response = requests.get(request_url, headers=headers)
-    if response.status_code != 200:
-        config.jwt_token = ""
-
-    return response.status_code
-
 def get_is_auth():
     return config.jwt_token != "" 
 
-def requires_authentication(func):
-    def decorated_function(*args, **kwargs):
-        auth_result = authorized_request()
-        if (auth_result != 200):
-            return redirect(url_for("login")) 
-    
-        return func(*args, **kwargs)
-    return decorated_function
 
 # Custom authentication decorator
 def allow_access_only_browser(func):
@@ -55,27 +33,25 @@ def allow_access_only_browser(func):
     return decorated_function
 
 
-@app.route("/protected", methods=["GET"], endpoint="protected")
-@jwt_required()
-def protected():
-    # Access the identity of the current user with get_jwt_identity
-    current_user = get_jwt_identity()
-    return jsonify(logged_in_as=current_user), 200
-
-@app.route("/login", methods=["GET","POST"], endpoint="login")
+@app.route("/login", methods=["GET"], endpoint="login")
 @allow_access_only_browser
 def login():
     is_authen = get_is_auth()
     authForm = utility.AuthForm() 
-    if not get_is_auth() :
-        if request.method == "POST":
-            config.jwt_token = create_access_token(identity=config.JWT_SECRET_KEY)
-            flash("authorization has been successfully ", "success")
-            return redirect(url_for("home"))
-    
     return render_template("login.html", 
                            is_authen=is_authen, 
                            form=authForm)  
+
+
+@app.route("/login", methods=["POST"], endpoint="get_token")
+def get_token():
+    config.jwt_token = create_access_token(identity=config.JWT_SECRET_KEY)
+    if utility.is_access_from_postman():
+        return jsonify(token=config.jwt_token)
+    else:
+        flash("authorization has been successfully ", "success")
+        return redirect(url_for("home"))
+
 
 @app.route("/logout", endpoint="logout")
 @allow_access_only_browser
@@ -92,6 +68,7 @@ def all_task():
     response = model.task_items
     return response if response else []
 
+
 # 2. POST /tasks: Adds a new task. The task is initially uncompleted when first added.
 @app.route("/tasks/", methods=["POST"])
 def add_new_task():
@@ -99,14 +76,17 @@ def add_new_task():
     return jsonify(status = 200 if response else 202 , 
                    msg = "Success" if response else "Invalid submit form")
 
+
 # 3. GET /tasks/{task_id}: Retrieves a task with a specific ID.
 @app.route("/tasks/<int:task_id>", methods=["GET"])
 def get_task(task_id):
     response = model.get_task_by_id(task_id)
     return response if response else {}
 
+
 # 4. DELETE /tasks/{task_id}: Deletes a task with a specific ID.
 @app.route("/tasks/<int:task_id>", methods=["DELETE"])
+@jwt_required()
 def delete_task(task_id):
     task_info = model.get_task_by_id(task_id)
     if not task_info:
@@ -128,6 +108,7 @@ def update_task(task_id):
     return jsonify(status = 200 if response else 202 , 
                    msg = "Success" if response else "Invalid submit form") 
 
+
 # 6. PUT /tasks/{task_id}/complete: Marks a task as completed.
 @app.route("/tasks/<int:task_id>/complete", methods=["PUT"])
 def set_task_completed(task_id):
@@ -143,11 +124,13 @@ def set_task_completed(task_id):
     else:
         return jsonify(status = 201, msg= "Not found")
 
+
 # 7. GET /tasks/categories/: Retrieves all different categories.
 @app.route("/tasks/categories", methods=["GET"])
 def get_all_categories():
     response = model.get_all_categories()
     return jsonify(result = response if response else {})
+
 
 # 8. GET /tasks/categories/{category_name}: Retrieves all tasks from a specific category.
 @app.route('/tasks/categories/<category_name>', methods=['GET'])
@@ -156,7 +139,6 @@ def filter_by_category(category_name):
     return jsonify(response if response else [])
 
 # #################### FRONTEND ##########################
-
 @app.route('/', methods=['GET'], endpoint="home")
 @allow_access_only_browser
 def home(): 
@@ -208,8 +190,10 @@ def home():
                         filterCategory="",
                         deleteItemForm=deleteItemForm)
 
+
 # -------- ITEM DETAIL  ------------
 @app.route("/todo/<int:task_id>/detail", methods=["GET"], endpoint="detail_tasks")
+@allow_access_only_browser
 def item(task_id):  
     deleteItemForm = utility.DeleteItemForm() 
 
@@ -224,9 +208,10 @@ def item(task_id):
 
     return redirect(url_for("home"))
 
+
 # -------- NEW ITEM  ------------
 @app.route("/todo/new", methods=["GET", "POST"], endpoint="new_tasks")
-@requires_authentication
+@allow_access_only_browser
 def new_item():
     form = utility.NewItemForm()
     form.category.choices = model.get_categories_tuples() 
@@ -239,7 +224,7 @@ def new_item():
 
 # -------- UPDATE ITEM  ------------
 @app.route("/todo/<int:task_id>/edit", methods=["GET", "POST"], endpoint="edit_tasks")
-@requires_authentication
+@allow_access_only_browser
 def edit_item(task_id):
     task_info = http_request.request_task_by_id(task_id) 
 
@@ -272,7 +257,7 @@ def edit_item(task_id):
         
 # -------- COMPLATE TASK -------
 @app.route("/todo/<int:task_id>/complate", methods=["POST"], endpoint="complete_tasks")
-@requires_authentication
+@allow_access_only_browser
 def set_task_completed(task_id):
     response = http_request.request_update_completed(task_id)
     if response.status_code == 200:
@@ -284,7 +269,7 @@ def set_task_completed(task_id):
     
 # -------- DELETE ITEM  ------------
 @app.route("/todo/<int:task_id>/delete", methods=["POST"], endpoint="delete_tasks")
-@requires_authentication
+@allow_access_only_browser
 def delete_tasks(task_id): 
     http_request.request_delete_task(task_id)
     return redirect(url_for("home"))

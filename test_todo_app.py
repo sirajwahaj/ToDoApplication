@@ -1,7 +1,8 @@
 from app import app
 import pytest
 import model
-import json
+import config
+from flask import request
 
 model.task_filename = "task_test.json"
 model.task_items = model.load_db(model.task_filename)
@@ -45,8 +46,6 @@ def test_task_new_record_success(client):
 
 def test_task_new_record_failed(client):
     headers = {}
-    # return status=200 if title is not empty
-    # return status=201 if title is empty (error)
     form_data = {"title": "",
         "description": "detail",
         "category": "test task"
@@ -77,18 +76,49 @@ def test_task_get_task_not_found(client):
 # 4. DELETE /tasks/{task_id}: Deletes a task with a specific ID.
 # @app.route("/tasks/<int:task_id>", methods=["DELETE"])
 def test_task_delete_task_found(client):
-    task_id = 1
-    response = client.delete(f"/tasks/{task_id}")
+    task_id = 2
+    # get token
+    headers = {
+        "User-Agent": "PostmanRuntime/7.34.0"
+    }
+    
+    form_data = {"get":"token"}
+    response = client.post('/login', data=form_data, headers=headers)
+    response_data = response.get_json()
+
+    # request delete
+    headers = {
+        'Authorization': f"Bearer {response_data["token"]}"
+    }
+    response = client.delete(f"/tasks/{task_id}", headers=headers)
     assert response.status_code == 200
     response_data = response.get_json()
     assert response_data['status'] == 200
 
 def test_task_delete_task_not_found(client):
     task_id = 3
-    response = client.delete(f"/tasks/{task_id}")
+    # get token
+    headers = {
+        "User-Agent": "PostmanRuntime/7.34.0"
+    }
+    
+    form_data = {"get":"token"}
+    response = client.post('/login', data=form_data, headers=headers)
+    response_data = response.get_json()
+
+    # request delete
+    headers = {
+        'Authorization': f"Bearer {response_data["token"]}"
+    }
+    response = client.delete(f"/tasks/{task_id}", headers=headers)
     assert response.status_code == 200
     response_data = response.get_json()
     assert response_data['status'] == 201
+
+def test_task_delete_without_unauthorized(client):
+    task_id = 3
+    response = client.delete(f"/tasks/{task_id}")
+    assert response.status_code == 401
 
 # 5. PUT /tasks/{task_id}: Updates a task with a specific ID.
 # @app.route("/tasks/<int:task_id>", methods=["PUT"])
@@ -165,3 +195,16 @@ def test_task_category_by_name_200(client):
     assert response.status_code == 200
     response_data = response.get_json()
     assert isinstance(response_data, list)
+
+
+# Extra enpoint: Request JWT token
+def test_request_jwt_token(client):
+    headers = {
+        "User-Agent": "PostmanRuntime/7.34.0"
+    }
+    
+    form_data = {"get":"token"}
+    response = client.post('/login', data=form_data, headers=headers)
+    assert response.status_code == 200
+    response_data = response.get_json()
+    assert "token" in response_data
