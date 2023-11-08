@@ -1,40 +1,44 @@
 
-import json 
+import json
 
 task_items = []
 task_filename = "task.json"
 category_filename = "category.json"
 
+
 def load_db(filename):
     json_dict = {}
     try:
         with open(filename, "r", encoding="utf-8") as file:
-                try:
-                    json_dict = json.load(file)
-                except json.JSONDecodeError as e:
-                    print(f"Wrong JSON format: {e}")
-                except ValueError:
-                    print("File is not json format")
+            try:
+                json_dict = json.load(file)
+            except json.JSONDecodeError as e:
+                print(f"Wrong JSON format: {e}")
+            except ValueError:
+                print("File is not json format")
     except FileNotFoundError:
         f = open(filename, "w", encoding="utf-8")
-        f.writelines("[]")  
+        f.writelines("[]")
 
     return json_dict
 
+
 def get_max_id():
-    if not task_items: 
+    if not task_items:
         return 1
-    else: 
+    else:
         # Find the maximum ID in the list
         max_id = max(task["id"] for task in task_items)
         # Calculate the next ID
-        return max_id + 1   
+        return max_id + 1
+
 
 def save_db():
     with open(task_filename, 'w') as f:
-        return json.dump(task_items, f, indent=4) 
+        return json.dump(task_items, f, indent=4)
 
-def get_task_by_id(task_id): 
+
+def get_task_by_id(task_id):
     for task in task_items:
         if task["id"] == task_id:
             return task
@@ -43,39 +47,40 @@ def get_task_by_id(task_id):
 
 def add_new_task(form):
     if not "title" in form:
-       return False
-    
+        return False
+
     description = form['description'] if "description" in form else ""
     category = form['category'] if "category" in form else "Default"
 
     if form['title'].strip():
         new_task = {"id": get_max_id(),
-            "title": form['title'],
-            "description": description,
-            "category": category,
-            "status": "Pending"
-        } 
+                    "title": form['title'],
+                    "description": description,
+                    "category": category,
+                    "status": "Pending"
+                    }
         task_items.append(new_task)
         save_db()
         return True
     else:
         return False
-    
+
+
 def update_task_by_id(task_id, form):
     if not "title" in form:
-       return False
-    
+        return False
+
     description = form['description'] if "description" in form else ""
     category = form['category'] if "category" in form else "Default"
     status = form['status'] if "status" in form else "Pending"
 
     if form['title'].strip():
         update_task = {"id": task_id,
-            "title": form['title'],
-            "description": description,
-            "category": category,
-            "status": "Completed" if status.lower() == 'completed' else "Pending",
-        }
+                       "title": form['title'],
+                       "description": description,
+                       "category": category,
+                       "status": "Completed" if status.lower() == 'completed' else "Pending",
+                       }
 
         for index, task in enumerate(task_items):
             if task["id"] == task_id:
@@ -90,9 +95,10 @@ def update_task_by_id(task_id, form):
 def delete_task_by_id(task_id):
     for index, task in enumerate(task_items):
         if task["id"] == task_id:
-            del task_items[index] 
+            del task_items[index]
             save_db()
             break
+
 
 def get_all_categories():
     categoreis = set()
@@ -114,6 +120,7 @@ def filter_by_category(category_name):
 def get_categories_tuples():
     cateigries = get_all_categories()
     return [(item, item) for item in cateigries]
+
 
 def do_filter_task(filter_form):
     # get all task
@@ -146,6 +153,3 @@ def do_filter_task(filter_form):
                 matching_tasks.append(task)
         filter_items = matching_tasks
     return filter_items
-
-
-
