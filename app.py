@@ -204,7 +204,7 @@ def item(task_id):
                                 item=task_info, 
                                 deleteItemForm=deleteItemForm) 
     else: 
-        flash("This item does not exist.", "danger")
+        flash("Not found item", "warning")
 
     return redirect(url_for("home"))
 
@@ -217,7 +217,11 @@ def new_item():
     form.category.choices = model.get_categories_tuples() 
 
     if form.validate_on_submit():
-        http_request.request_add_new_task(request.form)
+        response = http_request.request_add_new_task(request.form)
+        if response["status"] == 200:
+            flash(f"Added item", "success")
+        else:
+            flash(f"Some thing went wrong with adding item", "warning")
         return redirect(url_for("home")) 
      
     return render_template("new_item.html", is_authen = get_is_auth(), form=form)
@@ -233,7 +237,7 @@ def edit_item(task_id):
         
         if form.validate_on_submit(): 
             response = http_request.request_update_task(request.form, task_id)
-            if response.status_code == 200:  # Check for a successful HTTP status code
+            if response["status"] == 200:
                 flash("Item {} has been successfully updated"
                     .format(form.title.data), "success")
                 return redirect(url_for("detail_tasks", task_id=task_id))
@@ -251,7 +255,7 @@ def edit_item(task_id):
                                 is_authen = get_is_auth(),
                                 item=task_info, form=form)
     else: 
-        flash("This item does not exist.", "danger")
+        flash("Not found item", "warning")
 
     return redirect(url_for("home")) 
         
@@ -260,10 +264,12 @@ def edit_item(task_id):
 @allow_access_only_browser
 def set_task_completed(task_id):
     response = http_request.request_update_completed(task_id)
-    if response.status_code == 200:
+    if response["status"] == 200:
         flash(f"You have set completed to task", "success")
-    else:
-        flash(f"Warning: You already completed task", "danger")
+    elif response["status"] == 203:
+        flash(f"You already completed task", "warning")
+    elif response["status"] == 201:
+        flash(f"Not found item", "warning")
 
     return redirect(url_for("home")) 
     
@@ -271,7 +277,11 @@ def set_task_completed(task_id):
 @app.route("/todo/<int:task_id>/delete", methods=["POST"], endpoint="delete_tasks")
 @allow_access_only_browser
 def delete_tasks(task_id): 
-    http_request.request_delete_task(task_id)
+    response = http_request.request_delete_task(task_id)
+    if response["status"] == 200:
+        flash(f"Deleted", "success")
+    else:
+        flash(f"Something went worong with authentication", "warning")
     return redirect(url_for("home"))
 
 
